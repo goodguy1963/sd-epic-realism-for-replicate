@@ -1,0 +1,21 @@
+#!/usr/bin/env python
+
+import os
+import shutil
+import urllib.request
+import sys
+
+# URL of the model checkpoint to download
+MODEL_URL = "https://civitai.com/api/download/models/143906?type=Model&format=SafeTensor&size=pruned&fp=fp16"
+MODEL_NAME = "epicrealismNatural_v40.safetensors"
+
+def main():
+    # Create model directory
+    os.makedirs("/src/model", exist_ok=True)
+    
+    print(f"Downloading {MODEL_NAME}...")
+    urllib.request.urlretrieve(MODEL_URL, f"/src/model/{MODEL_NAME}")
+    print("Download complete.")
+
+if __name__ == "__main__":
+    main()
