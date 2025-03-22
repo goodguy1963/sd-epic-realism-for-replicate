@@ -1,6 +1,8 @@
 # Epic Realism Stable Diffusion
 
 A Stable Diffusion implementation combining Epic Realism v4.0 and PerfectDeliberate v5.0 models with LoRA support. This project was created using Claude 3.7 Agent via VS Code Insider Build.
+Running in a cog container for deployment on services like replicate.com 
+Runs locally, too. 
 
 ## Features
 
