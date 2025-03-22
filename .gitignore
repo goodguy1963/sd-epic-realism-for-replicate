@@ -1,0 +1,50 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+env/
+ENV/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Model files and cache
+model/*.safetensors
+lora/*.safetensors
+diffusers-cache/
+*.ckpt
+*.pt
+*.pth
+*.bin
+
+# API Keys and sensitive information
+civitai_api_key.txt
+
+# Generated files
+output.png
+*.log
+tmp/
+temp/

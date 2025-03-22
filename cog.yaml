@@ -2,14 +2,11 @@ build:
   gpu: true
   cuda: "11.8"
   python_version: "3.11.1"
-  python_packages:
-    - "diffusers==0.21.4"
-    - "torch==2.0.1"
-    - "ftfy==6.1.1"
-    - "scipy==1.9.3"
-    - "transformers==4.31.0"
-    - "accelerate==0.21.0"
-    - "safetensors==0.3.3"
-    - "xformers==0.0.20"
+  python_requirements: requirements.txt
+  run:
+    - mkdir -p /src/model
+    - find ${CONFIG_ROOT} -name "*.safetensors" -type f -exec cp {} /src/model/ \;
+    - ls -la /src/model/
 
 predict: "predict.py:Predictor"
+image: "r8.im/goodguy1963/epicrealism-naturalsinfinal-byepinikion-v2"

@@ -1,21 +1,174 @@
 #!/usr/bin/env python
 
 import os
-import shutil
-import urllib.request
 import sys
+import requests
+from tqdm import tqdm
+import time
 
-# URL of the model checkpoint to download
-MODEL_URL = "https://civitai.com/api/download/models/143906?type=Model&format=SafeTensor&size=pruned&fp=fp16"
-MODEL_NAME = "epicrealismNatural_v40.safetensors"
+def read_api_key():
+    """Read the API key from the civitai_api_key.txt file"""
+    api_key_file = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), "civitai_api_key.txt")
+    api_key = None
+    
+    if os.path.exists(api_key_file):
+        try:
+            with open(api_key_file, 'r') as f:
+                lines = f.readlines()
+                for line in lines:
+                    line = line.strip()
+                    if line and not line.startswith('#'):
+                        api_key = line
+                        break
+        except Exception as e:
+            print(f"Error reading API key file: {str(e)}")
+    
+    return api_key
+
+def download_file(url, filename, max_retries=3, api_key=None):
+    """Download a file with proper validation for SafeTensors files"""
+    # Check if API key is required and provided
+    if "civitai.com" in url and not api_key:
+        print("ERROR: Civitai API key is required for downloading from Civitai.")
+        print("Please provide an API key using the civitai_api_key parameter.")
+        return False
+        
+    for attempt in range(max_retries):
+        try:
+            print(f"Downloading from {url} (Attempt {attempt + 1}/{max_retries})")
+            
+            # Setup headers with Civitai API key if provided
+            headers = {'User-Agent': 'Mozilla/5.0'}
+            
+            # Add authorization header if API key is provided
+            if api_key and "civitai.com" in url:
+                print("Using API key for Civitai download")
+                headers['Authorization'] = f'Bearer {api_key}'
+            
+            # Create a session for the download
+            session = requests.Session()
+            
+            # Download with stream=True for large files
+            response = session.get(url, headers=headers, stream=True)
+            response.raise_for_status()
+            total_size = int(response.headers.get('content-length', 0))
+            
+            if total_size == 0:
+                print("Warning: Content-Length is 0, file might be empty")
+                if attempt < max_retries - 1:
+                    time.sleep(2)
+                    continue
+                return False
+            
+            # Create directory if needed
+            os.makedirs(os.path.dirname(os.path.abspath(filename)), exist_ok=True)
+            
+            # Use a temporary file during download
+            temp_filename = f"{filename}.tmp"
+            
+            with open(temp_filename, 'wb') as f, tqdm(
+                desc=filename,
+                total=total_size,
+                unit='iB',
+                unit_scale=True,
+                unit_divisor=1024,
+            ) as pbar:
+                for chunk in response.iter_content(chunk_size=8192):
+                    if chunk:
+                        size = f.write(chunk)
+                        pbar.update(size)
+            
+            # Verify the downloaded file
+            if os.path.exists(temp_filename):
+                file_size = os.path.getsize(temp_filename)
+                if file_size > 0:
+                    # For safetensors files, check the file format
+                    if filename.endswith('.safetensors'):
+                        with open(temp_filename, 'rb') as f:
+                            # Read first few bytes to check format
+                            header = f.read(8)
+                            # SafeTensors files start with a specific header structure
+                            if header.startswith(b'<!DOCTYPE') or header.startswith(b'<html') or header.startswith(b'HTTP'):
+                                print(f"Error: Downloaded file is HTML/text, not a safetensors file")
+                                if os.path.exists(temp_filename):
+                                    os.remove(temp_filename)
+                                if attempt < max_retries - 1:
+                                    time.sleep(2)
+                                    continue
+                                return False
+                    
+                    # If all checks pass, move temp file to final location
+                    os.replace(temp_filename, filename)
+                    print(f"Successfully downloaded {filename} ({file_size / (1024*1024):.2f} MB)")
+                    return True
+                else:
+                    print(f"Error: Downloaded file is empty")
+                    if os.path.exists(temp_filename):
+                        os.remove(temp_filename)
+                    if attempt < max_retries - 1:
+                        time.sleep(2)
+                        continue
+                    return False
+                    
+        except requests.exceptions.RequestException as e:
+            print(f"Error during download (Attempt {attempt + 1}/{max_retries}): {str(e)}")
+            if 'temp_filename' in locals() and os.path.exists(temp_filename):
+                os.remove(temp_filename)
+            if attempt < max_retries - 1:
+                time.sleep(2)
+                continue
+            return False
+            
+    print(f"Failed to download {filename} after {max_retries} attempts")
+    return False
 
 def main():
-    # Create model directory
-    os.makedirs("/src/model", exist_ok=True)
-    
-    print(f"Downloading {MODEL_NAME}...")
-    urllib.request.urlretrieve(MODEL_URL, f"/src/model/{MODEL_NAME}")
-    print("Download complete.")
+    try:
+        # Read API key
+        api_key = read_api_key()
+        if not api_key:
+            print("Warning: No API key found. Downloads from Civitai may fail.")
+            
+        BASE_PATH = os.environ.get('COG_PATH', '')
+        MODEL_PATH = os.path.join(BASE_PATH, "model")
+        LORA_PATH = os.path.join(BASE_PATH, "lora")
+        os.makedirs(MODEL_PATH, exist_ok=True)
+        os.makedirs(LORA_PATH, exist_ok=True)
+        
+        MODEL_URLS = {
+            "epicrealismNatural_v40.safetensors": "https://civitai.com/api/download/models/143906?type=Model&format=SafeTensor&size=pruned&fp=fp16",
+            "perfectdeliberate.safetensors": "https://civitai.com/api/download/models/253055?type=Model&format=SafeTensor&size=full&fp=fp32"
+        }
+        
+        LORA_URLS = {
+            "more_details.safetensors": "https://civitai.com/api/download/models/87153?type=Model&format=SafeTensor"
+        }
+        
+        for filename, url in MODEL_URLS.items():
+            file_path = os.path.join(MODEL_PATH, filename)
+            if not os.path.exists(file_path) or os.path.getsize(file_path) < 10000:  # File doesn't exist or is too small
+                print(f"Downloading model to {file_path}...")
+                if download_file(url, file_path, api_key=api_key):
+                    print(f"Successfully downloaded model ({os.path.getsize(file_path) / 1024 / 1024:.2f} MB)")
+                else:
+                    raise RuntimeError(f"Failed to download model to {file_path}")
+            else:
+                print(f"Model file already exists: {file_path} ({os.path.getsize(file_path) / 1024 / 1024:.2f} MB)")
+        
+        for filename, url in LORA_URLS.items():
+            file_path = os.path.join(LORA_PATH, filename)
+            if not os.path.exists(file_path) or os.path.getsize(file_path) < 10000:  # File doesn't exist or is too small
+                print(f"Downloading LoRA to {file_path}...")
+                if download_file(url, file_path, api_key=api_key):
+                    print(f"Successfully downloaded LoRA ({os.path.getsize(file_path) / 1024 / 1024:.2f} MB)")
+                else:
+                    raise RuntimeError(f"Failed to download LoRA to {file_path}")
+            else:
+                print(f"LoRA file already exists: {file_path} ({os.path.getsize(file_path) / 1024 / 1024:.2f} MB)")
+        
+    except Exception as e:
+        print(f"Error: {str(e)}", file=sys.stderr)
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()
