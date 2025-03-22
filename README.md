@@ -1,6 +1,6 @@
 # Epic Realism Stable Diffusion
 
-A Stable Diffusion implementation combining Epic Realism v4.0 and PerfectDeliberate v5.0 models with LoRA support.
+A Stable Diffusion implementation combining Epic Realism v4.0 and PerfectDeliberate v5.0 models with LoRA support. This project creates a Replicate API using Claude 3.7 Agent via VS Code Insider Build.
 
 ## Features
 
@@ -34,6 +34,34 @@ pip install -r requirements.txt
 
 4. The models and LoRAs will be downloaded automatically on first run.
 
+## Getting Started
+
+### Obtain Civitai API Key
+1. Create an account on [Civitai](https://civitai.com)
+2. Go to Settings → API Keys
+3. Generate a new API key
+4. Save the key in `civitai_api_key.txt` in the project root
+
+### Running with Cog
+
+1. Install Cog:
+```bash
+sudo curl -o /usr/local/bin/cog -L https://github.com/replicate/cog/releases/latest/download/cog_`uname -s`_`uname -m`
+sudo chmod +x /usr/local/bin/cog
+```
+
+2. Build the model:
+```bash
+cog build
+```
+
+3. Run predictions:
+```bash
+cog predict -i prompt="your prompt here"
+```
+
+Note: When using Windows, it's recommended to use WSL (Windows Subsystem for Linux) as your default terminal for better compatibility.
+
 ## Usage
 
 The model can be used through Cog or directly through Python. 
@@ -56,10 +84,11 @@ The model can be used through Cog or directly through Python.
 - `scheduler_type`: Type of scheduler to use
 - `seed`: Random seed for reproducibility
 
-## Models
+## Models and LoRA
 
-- Epic Realism v4.0: A photorealistic model focused on natural images
-- PerfectDeliberate v5.0: High-quality general purpose model
+- Epic Realism Natural Sin Final SD1.5 by epinikion
+- PerfectDeliberate by Desync
+- "More Details" LoRA by Lykon
 
 ## License
 
