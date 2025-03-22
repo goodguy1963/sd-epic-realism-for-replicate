@@ -90,6 +90,3 @@ The model can be used through Cog or directly through Python.
 - PerfectDeliberate by Desync
 - "More Details" LoRA by Lykon
 
-## License
-
-[Include your license information here]
